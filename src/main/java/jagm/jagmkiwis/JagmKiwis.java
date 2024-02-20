@@ -1,151 +1,151 @@
 package jagm.jagmkiwis;
 
-import java.util.function.Predicate;
-
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
+import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
+import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroupEntries;
+import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
+import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
+import net.fabricmc.fabric.api.object.builder.v1.entity.FabricEntityTypeBuilder;
+import net.fabricmc.fabric.impl.itemgroup.ItemGroupEventsImpl;
+import net.minecraft.entity.EntityDimensions;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.SpawnGroup;
+import net.minecraft.entity.passive.CatEntity;
+import net.minecraft.item.*;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
+import net.minecraft.sound.SoundEvent;
+import net.minecraft.util.Identifier;
+import net.minecraft.world.WorldEvents;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.mojang.logging.LogUtils;
-
-import net.minecraft.client.renderer.entity.EntityRenderers;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.MobCategory;
-import net.minecraft.world.entity.SpawnPlacements;
-import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
-import net.minecraft.world.entity.animal.Animal;
-import net.minecraft.world.entity.animal.Cat;
-import net.minecraft.world.food.FoodProperties;
-import net.minecraft.world.food.Foods;
-import net.minecraft.world.item.CreativeModeTabs;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraftforge.client.event.EntityRenderersEvent;
-import net.minecraftforge.common.ForgeSpawnEggItem;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
-import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
-import net.minecraftforge.event.entity.EntityJoinLevelEvent;
-import net.minecraftforge.event.entity.SpawnPlacementRegisterEvent;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
-
-@Mod(JagmKiwis.MODID)
-public class JagmKiwis {
+public class JagmKiwis implements ModInitializer, ClientModInitializer {
 
 	public static final String MODID = "jagmkiwis";
 
-	@SuppressWarnings("unused")
-	private static final Logger LOGGER = LogUtils.getLogger();
+	public static final EntityType<KiwiEntity> KIWI = Registry.register(Registries.ENTITY_TYPE, createIdentifier("kiwi"),
+			FabricEntityTypeBuilder.create(SpawnGroup.CREATURE, KiwiEntity::new).forceTrackedVelocityUpdates(true).trackRangeChunks(8)
+					.dimensions(EntityDimensions.fixed(0.5F, 0.5F)).build());
+	public static final EntityType<LaserBeamEntity> LASER_BEAM = Registry.register(Registries.ENTITY_TYPE, createIdentifier("laser_beam"), FabricEntityTypeBuilder.<LaserBeamEntity>create(SpawnGroup.MISC, LaserBeamEntity::new).forceTrackedVelocityUpdates(true).dimensions(EntityDimensions.fixed(0.5F, 0.5F)).build());
 
-	public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, MODID);
-	public static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, MODID);
-	public static final DeferredRegister<SoundEvent> SOUNDS = DeferredRegister.create(ForgeRegistries.SOUND_EVENTS, MODID);
+	public static final Item KIWI_SPAWN_EGG = Registry.register(Registries.ITEM, createIdentifier("kiwi_spawn_egg"), new SpawnEggItem(KIWI, 0x97784A, 0xBEE000, new Item.Settings()));
+	public static final Item KIWI_FRUIT = Registry.register(Registries.ITEM, createIdentifier("kiwi_fruit"), new Item((new Item.Settings()).food(FoodComponents.APPLE)));
+	public static final Item KIWI_EGG = Registry.register(Registries.ITEM, createIdentifier("kiwi_egg"), new KiwiEggItem((new Item.Settings()).maxCount(16)));
+	public static final Item PAVLOVA = Registry.register(Registries.ITEM, createIdentifier("pavlova"),
+			new Item((new Item.Settings()).food((new FoodComponent.Builder()).hunger(10).saturationModifier(0.6F).build())));
 
-	public static final RegistryObject<EntityType<KiwiEntity>> KIWI = ENTITIES.register("kiwi",
-			() -> EntityType.Builder.of((EntityType.EntityFactory<KiwiEntity>) KiwiEntity::new, MobCategory.CREATURE).clientTrackingRange(8).setShouldReceiveVelocityUpdates(false)
-					.sized(0.5F, 0.5F).build("kiwi"));
-	public static final RegistryObject<EntityType<LaserBeamEntity>> LASER_BEAM = ENTITIES.register("laser_beam", () -> EntityType.Builder
-			.of((EntityType.EntityFactory<LaserBeamEntity>) LaserBeamEntity::new, MobCategory.MISC).setShouldReceiveVelocityUpdates(true).sized(0.5F, 0.5F).build("laser_beam"));
+	public static final SoundEvent KIWI_AMBIENT_SOUND = Registry.register(Registries.SOUND_EVENT, createIdentifier("kiwi_ambient"),
+			SoundEvent.of(new Identifier(MODID, "kiwi_ambient")));
+	public static final SoundEvent KIWI_HURT_SOUND = Registry.register(Registries.SOUND_EVENT, createIdentifier("kiwi_hurt"),
+			SoundEvent.of(new Identifier(MODID, "kiwi_hurt")));
+	public static final SoundEvent KIWI_DEATH_SOUND = Registry.register(Registries.SOUND_EVENT, createIdentifier("kiwi_death"),
+			SoundEvent.of(new Identifier(MODID, "kiwi_death")));
+	public static final SoundEvent KIWI_DIG = Registry.register(Registries.SOUND_EVENT, createIdentifier("kiwi_dig"), SoundEvent.of(new Identifier(MODID, "kiwi_dig")));
+	public static final SoundEvent KIWI_LAY_EGG = Registry.register(Registries.SOUND_EVENT, createIdentifier("kiwi_lay_egg"),
+			SoundEvent.of(new Identifier(MODID, "kiwi_lay_egg")));
+	public static final SoundEvent LASER_SHOOT_SOUND = Registry.register(Registries.SOUND_EVENT, createIdentifier("laser_shoot"),
+			SoundEvent.of(new Identifier(MODID, "laser_shoot")));
 
-	public static final RegistryObject<Item> KIWI_SPAWN_EGG = ITEMS.register("kiwi_spawn_egg", () -> new ForgeSpawnEggItem(KIWI, 0x97784A, 0xBEE000, new Item.Properties()));
-	public static final RegistryObject<Item> KIWI_FRUIT = ITEMS.register("kiwi_fruit", () -> new Item((new Item.Properties()).food(Foods.APPLE)));
-	public static final RegistryObject<Item> KIWI_EGG = ITEMS.register("kiwi_egg", () -> new KiwiEggItem((new Item.Properties()).stacksTo(16)));
-	public static final RegistryObject<Item> PAVLOVA = ITEMS.register("pavlova",
-			() -> new Item((new Item.Properties()).food((new FoodProperties.Builder()).nutrition(10).saturationMod(0.6F).build())));
+	public static final Logger LOGGER = LoggerFactory.getLogger(MODID);
 
-	public static final RegistryObject<SoundEvent> KIWI_AMBIENT_SOUND = SOUNDS.register("kiwi_ambient",
-			() -> SoundEvent.createVariableRangeEvent(new ResourceLocation(MODID, "kiwi_ambient")));
-	public static final RegistryObject<SoundEvent> KIWI_HURT_SOUND = SOUNDS.register("kiwi_hurt",
-			() -> SoundEvent.createVariableRangeEvent(new ResourceLocation(MODID, "kiwi_hurt")));
-	public static final RegistryObject<SoundEvent> KIWI_DEATH_SOUND = SOUNDS.register("kiwi_death",
-			() -> SoundEvent.createVariableRangeEvent(new ResourceLocation(MODID, "kiwi_death")));
-	public static final RegistryObject<SoundEvent> KIWI_DIG = SOUNDS.register("kiwi_dig", () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(MODID, "kiwi_dig")));
-	public static final RegistryObject<SoundEvent> KIWI_LAY_EGG = SOUNDS.register("kiwi_lay_egg",
-			() -> SoundEvent.createVariableRangeEvent(new ResourceLocation(MODID, "kiwi_lay_egg")));
-	public static final RegistryObject<SoundEvent> LASER_SHOOT_SOUND = SOUNDS.register("laser_shoot",
-			() -> SoundEvent.createVariableRangeEvent(new ResourceLocation(MODID, "laser_shoot")));
+	@Override
+	public void onInitialize() {
+		LOGGER.info("JagmKiwis loaded.");
 
-	public JagmKiwis() {
-		IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+		FabricDefaultAttributeRegistry.register(KIWI, KiwiEntity.prepareAttributes());
 
-		ITEMS.register(modEventBus);
-		ENTITIES.register(modEventBus);
-		SOUNDS.register(modEventBus);
-
-		MinecraftForge.EVENT_BUS.register(this);
-		MinecraftForge.EVENT_BUS.register(JagmKiwis.class);
+		ItemGroupEvents.modifyEntriesEvent(ItemGroups.FOOD_AND_DRINK).register(entries -> {
+			entries.add(KIWI_FRUIT);
+			entries.add(PAVLOVA);
+		});
+		ItemGroupEvents.modifyEntriesEvent(ItemGroups.SPAWN_EGGS).register(entries -> {
+			entries.add(KIWI_SPAWN_EGG);
+		});
+		ItemGroupEvents.modifyEntriesEvent(ItemGroups.INGREDIENTS).register(entries -> {
+			entries.add(KIWI_EGG);
+		});
 	}
 
-	@Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
-	public class ModSetup {
-
-		@SubscribeEvent
-		public static void onAttributeCreate(EntityAttributeCreationEvent event) {
-			event.put(KIWI.get(), KiwiEntity.prepareAttributes().build());
-		}
-
-		@SubscribeEvent
-		public static void onRegisterSpawnPlacements(SpawnPlacementRegisterEvent event) {
-			event.register(KIWI.get(), SpawnPlacements.Type.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Animal::checkAnimalSpawnRules,
-					SpawnPlacementRegisterEvent.Operation.REPLACE);
-		}
-
-		@SubscribeEvent
-		public static void onFillCreativeTabs(BuildCreativeModeTabContentsEvent event) {
-
-			if (event.getTabKey() == CreativeModeTabs.FOOD_AND_DRINKS) {
-				event.accept(KIWI_FRUIT);
-				event.accept(PAVLOVA);
-			}
-
-			if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
-				event.accept(KIWI_SPAWN_EGG);
-			}
-
-			if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
-				event.accept(KIWI_EGG);
-			}
-
-			if (event.getTabKey() == CreativeModeTabs.COMBAT) {
-				event.accept(KIWI_EGG);
-			}
-
-		}
-
+	@Override
+	public void onInitializeClient() {
+		EntityRendererRegistry.register(KIWI, KiwiRenderer::new);
+		EntityRendererRegistry.register(LASER_BEAM, LaserBeamRenderer::new);
+		EntityModelLayerRegistry.registerModelLayer(KiwiModel.KIWI_LAYER, KiwiModel::getTexturedModelData);
 	}
 
-	@Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
-	public class ClientModEvents {
-
-		@SubscribeEvent
-		public static void onClientSetup(FMLClientSetupEvent event) {
-			EntityRenderers.register(KIWI.get(), KiwiRenderer::new);
-			EntityRenderers.register(LASER_BEAM.get(), LaserBeamRenderer::new);
-		}
-
-		@SubscribeEvent
-		public static void onRegisterLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
-			event.registerLayerDefinition(KiwiModel.KIWI_LAYER, KiwiModel::createBodyLayer);
-		}
-
+	public static Identifier createIdentifier(String name) {
+		return new Identifier(MODID, name);
 	}
 
-	@SubscribeEvent
-	public static void onJoinLevel(EntityJoinLevelEvent event) {
-		if (event.getEntity() instanceof Cat) {
-			Cat cat = (Cat) event.getEntity();
-			if (cat.level() != null && !cat.level().isClientSide) {
-				cat.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(cat, KiwiEntity.class, false, (Predicate<LivingEntity>) null));
-			}
-		}
-	}
+//	@Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
+//	public class ModSetup {
+//
+//		@SubscribeEvent
+//		public static void onAttributeCreate(EntityAttributeCreationEvent event) {
+//			event.put(KIWI.get(), KiwiEntity.prepareAttributes().build());
+//		}
+//
+//		@SubscribeEvent
+//		public static void onRegisterSpawnPlacements(SpawnPlacementRegisterEvent event) {
+//			event.register(KIWI.get(), SpawnPlacements.Type.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Animal::checkAnimalSpawnRules,
+//					SpawnPlacementRegisterEvent.Operation.REPLACE);
+//		}
+//
+//		@SubscribeEvent
+//		public static void onFillCreativeTabs(BuildCreativeModeTabContentsEvent event) {
+//
+//			if (event.getTabKey() == CreativeModeTabs.FOOD_AND_DRINKS) {
+//				event.accept(KIWI_FRUIT);
+//				event.accept(PAVLOVA);
+//			}
+//
+//			if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
+//				event.accept(KIWI_SPAWN_EGG);
+//			}
+//
+//			if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
+//				event.accept(KIWI_EGG);
+//			}
+//
+//			if (event.getTabKey() == CreativeModeTabs.COMBAT) {
+//				event.accept(KIWI_EGG);
+//			}
+//
+//		}
+//
+//	}
+//
+//	@Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
+//	public class ClientModEvents {
+//
+//		@SubscribeEvent
+//		public static void onClientSetup(FMLClientSetupEvent event) {
+//			EntityRenderers.register(KIWI.get(), KiwiRenderer::new);
+//			EntityRenderers.register(LASER_BEAM.get(), LaserBeamRenderer::new);
+//		}
+//
+//		@SubscribeEvent
+//		public static void onRegisterLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
+//			event.registerLayerDefinition(KiwiModel.KIWI_LAYER, KiwiModel::createBodyLayer);
+//		}
+//
+//	}
+//
+//	@SubscribeEvent
+//	public static void onJoinLevel(EntityJoinLevelEvent event) {
+//		if (event.getEntity() instanceof Cat) {
+//			Cat cat = (Cat) event.getEntity();
+//			if (cat.level() != null && !cat.level().isClientSide) {
+//				cat.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(cat, KiwiEntity.class, false, (Predicate<LivingEntity>) null));
+//			}
+//		}
+//	}
 
 }

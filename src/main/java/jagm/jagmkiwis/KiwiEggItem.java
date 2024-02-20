@@ -1,50 +1,50 @@
 package jagm.jagmkiwis;
 
-import net.minecraft.core.BlockPos;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.stats.Stats;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResultHolder;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.ThrownEgg;
-import net.minecraft.world.item.EggItem;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.gameevent.GameEvent;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.EntityHitResult;
-import net.minecraft.world.phys.HitResult;
+import net.minecraft.block.BlockState;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.projectile.thrown.EggEntity;
+import net.minecraft.item.EggItem;
+import net.minecraft.item.ItemStack;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
+import net.minecraft.stat.Stats;
+import net.minecraft.util.Hand;
+import net.minecraft.util.TypedActionResult;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.EntityHitResult;
+import net.minecraft.util.hit.HitResult;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+import net.minecraft.world.event.GameEvent;
 
 public class KiwiEggItem extends EggItem {
 
-	public KiwiEggItem(Properties properties) {
-		super(properties);
+	public KiwiEggItem(Settings settings) {
+		super(settings);
 	}
 
 	@Override
-	public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-		ItemStack itemstack = player.getItemInHand(hand);
-		level.playSound((Player) null, player.getX(), player.getY(), player.getZ(), SoundEvents.EGG_THROW, SoundSource.PLAYERS, 0.5F,
-				0.4F / (level.getRandom().nextFloat() * 0.4F + 0.8F));
-		if (!level.isClientSide) {
-			ThrownEgg thrownegg = new ThrownEgg(level, player) {
+	public TypedActionResult<ItemStack> use(World world, PlayerEntity player, Hand hand) {
+		ItemStack itemstack = player.getStackInHand(hand);
+		world.playSound((PlayerEntity) null, player.getX(), player.getY(), player.getZ(), SoundEvents.ENTITY_EGG_THROW, SoundCategory.PLAYERS, 0.5F,
+				0.4F / (world.getRandom().nextFloat() * 0.4F + 0.8F));
+		if (!world.isClient) {
+			EggEntity thrownegg = new EggEntity(world, player) {
 
 				@Override
-				protected void onHit(HitResult hitResult) {
-					Level level = this.level();
+				protected void onCollision(HitResult hitResult) {
+					World world = this.getWorld();
 					HitResult.Type hitresult$type = hitResult.getType();
 					if (hitresult$type == HitResult.Type.ENTITY) {
-						this.onHitEntity((EntityHitResult) hitResult);
-						level.gameEvent(GameEvent.PROJECTILE_LAND, hitResult.getLocation(), GameEvent.Context.of(this, (BlockState) null));
+						this.onEntityHit((EntityHitResult) hitResult);
+						world.emitGameEvent(GameEvent.PROJECTILE_LAND, hitResult.getPos(), GameEvent.Emitter.of(this, (BlockState) null));
 					} else if (hitresult$type == HitResult.Type.BLOCK) {
 						BlockHitResult blockhitresult = (BlockHitResult) hitResult;
-						this.onHitBlock(blockhitresult);
+						this.onBlockHit(blockhitresult);
 						BlockPos blockpos = blockhitresult.getBlockPos();
-						level.gameEvent(GameEvent.PROJECTILE_LAND, blockpos, GameEvent.Context.of(this, level.getBlockState(blockpos)));
+						world.emitGameEvent(GameEvent.PROJECTILE_LAND, blockpos, GameEvent.Emitter.of(this, world.getBlockState(blockpos)));
 					}
-					if (!level.isClientSide) {
+					if (!world.isClient) {
 						if (this.random.nextInt(8) == 0) {
 							int i = 1;
 							if (this.random.nextInt(32) == 0) {
@@ -52,33 +52,33 @@ public class KiwiEggItem extends EggItem {
 							}
 
 							for (int j = 0; j < i; ++j) {
-								KiwiEntity kiwi = JagmKiwis.KIWI.get().create(level);
+								KiwiEntity kiwi = JagmKiwis.KIWI.create(world);
 								if (kiwi != null) {
-									kiwi.setAge(-24000);
-									kiwi.moveTo(this.getX(), this.getY(), this.getZ(), this.getYRot(), 0.0F);
-									level.addFreshEntity(kiwi);
+									kiwi.age = -24000;
+									kiwi.setPos(this.getX(), this.getY(), this.getZ());
+									kiwi.setYaw(this.getYaw());
+									world.spawnEntity(kiwi);
 								}
 							}
 						}
 
-						level.broadcastEntityEvent(this, (byte) 3);
+						world.sendEntityStatus(this, (byte) 3);
 						this.discard();
 					}
-
 				}
 
 			};
 			thrownegg.setItem(itemstack);
-			thrownegg.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, 0.25F, 1.0F);
-			level.addFreshEntity(thrownegg);
+			thrownegg.setVelocity(player, player.getPitch(), player.getYaw(), 0.0F, 0.25F, 1.0F);
+			world.spawnEntity(thrownegg);
 		}
 
-		player.awardStat(Stats.ITEM_USED.get(this));
-		if (!player.getAbilities().instabuild) {
-			itemstack.shrink(1);
+		player.incrementStat(Stats.USED.getOrCreateStat(this));
+		if (!player.getAbilities().creativeMode) {
+			itemstack.decrement(1);
 		}
 
-		return InteractionResultHolder.sidedSuccess(itemstack, level.isClientSide());
+		return TypedActionResult.success(itemstack, world.isClient);
 	}
 
 }

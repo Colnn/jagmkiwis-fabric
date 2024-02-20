@@ -1,20 +1,23 @@
 package jagm.jagmkiwis;
 
-import net.minecraft.client.renderer.entity.EntityRendererProvider.Context;
-import net.minecraft.client.renderer.entity.MobRenderer;
-import net.minecraft.resources.ResourceLocation;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import net.minecraft.client.render.entity.EntityRendererFactory;
+import net.minecraft.client.render.entity.MobEntityRenderer;
+import net.minecraft.util.Identifier;
 
-public class KiwiRenderer extends MobRenderer<KiwiEntity, KiwiModel<KiwiEntity>> {
+@Environment(EnvType.CLIENT)
+public class KiwiRenderer extends MobEntityRenderer<KiwiEntity, KiwiModel<KiwiEntity>> {
 
-	private static final ResourceLocation NORMAL_KIWI = new ResourceLocation(JagmKiwis.MODID, "textures/entity/kiwi.png");
-	private static final ResourceLocation LASER_KIWI = new ResourceLocation(JagmKiwis.MODID, "textures/entity/laser_kiwi.png");
+	private static final Identifier NORMAL_KIWI = new Identifier(JagmKiwis.MODID, "textures/entity/kiwi.png");
+	private static final Identifier LASER_KIWI = new Identifier(JagmKiwis.MODID, "textures/entity/laser_kiwi.png");
 
-	public KiwiRenderer(Context context) {
-		super(context, new KiwiModel<KiwiEntity>(context.bakeLayer(KiwiModel.KIWI_LAYER)), 0.3F);
+	public KiwiRenderer(EntityRendererFactory.Context context) {
+		super(context, new KiwiModel<>(context.getPart(KiwiModel.KIWI_LAYER)), 0.5F);
 	}
 
 	@Override
-	public ResourceLocation getTextureLocation(KiwiEntity kiwi) {
+	public Identifier getTexture(KiwiEntity kiwi) {
 		return kiwi.getVariant() == KiwiEntity.Variant.LASER ? LASER_KIWI : NORMAL_KIWI;
 	}
 
