@@ -222,9 +222,8 @@ public class KiwiEntity extends AnimalEntity implements VariantHolder<KiwiEntity
 		return babyKiwi;
 	}
 
-
 	@Override
-	public void shootAt(LivingEntity target, float pullProgress) {
+	public void attack(LivingEntity target, float pullProgress) {
 		LaserBeamEntity laser = new LaserBeamEntity(this, this.getWorld());
 		double d0 = target.getX() - this.getX();
 		double d1 = target.getEyeY() - this.getEyeY();
@@ -237,6 +236,7 @@ public class KiwiEntity extends AnimalEntity implements VariantHolder<KiwiEntity
 			this.playSound(JagmKiwis.LASER_SHOOT_SOUND, 0.3F, 1.0F);
 		}
 	}
+
 
 	public static enum Variant implements StringIdentifiable {
 		NORMAL(0, "normal"),

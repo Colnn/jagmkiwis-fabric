@@ -15,17 +15,16 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
 
 public class LaserBeamEntity extends PersistentProjectileEntity {
-
-	public LaserBeamEntity(EntityType<? extends PersistentProjectileEntity> type, World world) {
-		super(type, world, ItemStack.EMPTY);
+	public LaserBeamEntity(EntityType<? extends PersistentProjectileEntity> entityType, World world) {
+		super(entityType, world);
 	}
 
 	protected LaserBeamEntity(LivingEntity owner, World world) {
-		super(JagmKiwis.LASER_BEAM, owner, world, ItemStack.EMPTY);
+		super(JagmKiwis.LASER_BEAM, owner, world);
 	}
 
 	@Override
-	public ItemStack getItemStack() {
+	public ItemStack asItemStack() {
 		return null;
 	}
 
