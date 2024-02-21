@@ -20,11 +20,19 @@ import net.minecraft.entity.passive.CatEntity;
 import net.minecraft.item.*;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.util.Identifier;
 import net.minecraft.world.WorldEvents;
+import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.BiomeKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 public class JagmKiwis implements ModInitializer, ClientModInitializer {
 
@@ -73,11 +81,22 @@ public class JagmKiwis implements ModInitializer, ClientModInitializer {
 		});
 	}
 
+	public static Collection<RegistryKey<Biome>> getValidSpawnBiomes() {
+		List<RegistryKey<Biome>> collection = new ArrayList<>();
+		collection.add(BiomeKeys.FOREST);
+		collection.add(BiomeKeys.FLOWER_FOREST);
+		collection.add(BiomeKeys.BIRCH_FOREST);
+		collection.add(BiomeKeys.OLD_GROWTH_BIRCH_FOREST);
+		collection.add(BiomeKeys.CHERRY_GROVE);
+		return collection;
+	}
+
 	@Override
 	public void onInitializeClient() {
 		EntityRendererRegistry.register(KIWI, KiwiRenderer::new);
 		EntityRendererRegistry.register(LASER_BEAM, LaserBeamRenderer::new);
 		EntityModelLayerRegistry.registerModelLayer(KiwiModel.KIWI_LAYER, KiwiModel::getTexturedModelData);
+		KiwiEntitySpawn.addEntitySpawn();
 	}
 
 	public static Identifier createIdentifier(String name) {
